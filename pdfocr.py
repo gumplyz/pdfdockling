@@ -2,10 +2,12 @@
 from pathlib import Path
 from datetime import datetime
 import smtplib
+import os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+from dotenv import load_dotenv
 
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import (
@@ -77,7 +79,8 @@ def send_email_with_attachment(file_path, recipient_email, smtp_server="smtp.163
 
 
 def main():
-    import os
+    # Load environment variables from .env file
+    load_dotenv()
 
     os.environ['HTTP_PROXY'] = 'http://proxy.net.sap.corp:8080'
     os.environ['HTTPS_PROXY'] = 'http://proxy.net.sap.corp:8080'
