@@ -83,7 +83,7 @@ def main():
     os.environ['HTTPS_PROXY'] = 'http://proxy.net.sap.corp:8080'
 
     data_folder = Path(__file__).parent / "../../tests/data"
-    input_doc_path = Path("./data/吕思勉全集 7 隋唐五代史 上 (吕思勉著).pdf")
+    input_doc_path = Path(os.getenv("INPUT_PDF_PATH", "./data/吕思勉全集 7 隋唐五代史 上 (吕思勉著).pdf"))
 
     pipeline_options = PdfPipelineOptions()
     pipeline_options.do_ocr = True
@@ -126,21 +126,28 @@ def main():
     print(f"File renamed to: {txt_file}")
 
     # Send email with attachment
-    # NOTE: You need to set your email credentials here
-    # For Gmail, use an app-specific password: https://support.google.com/accounts/answer/185833
-    sender_email = "gumplyz22@163.com"  # Replace with your email
-    sender_password = "ADaMqASzVgAJeYcg"  # Replace with your app password
-    recipient_email = "gumplyz_FIBnP0@kindle.com"
+    # Email credentials are read from environment variables
+    # Set these in your environment or .env file:
+    # - SENDER_EMAIL: Your email address
+    # - SENDER_PASSWORD: Your email password or app-specific password
+    # - RECIPIENT_EMAIL: Recipient's email address
+    sender_email = os.getenv("SENDER_EMAIL")
+    sender_password = os.getenv("SENDER_PASSWORD")
+    recipient_email = os.getenv("RECIPIENT_EMAIL")
 
-    try:
-        send_email_with_attachment(
-            file_path=txt_file,
-            recipient_email=recipient_email,
-            sender_email=sender_email,
-            sender_password=sender_password
-        )
-    except Exception as e:
-        print(f"Email sending failed: {str(e)}")
+    if sender_email and sender_password and recipient_email:
+        try:
+            send_email_with_attachment(
+                file_path=txt_file,
+                recipient_email=recipient_email,
+                sender_email=sender_email,
+                sender_password=sender_password
+            )
+        except Exception as e:
+            print(f"Email sending failed: {str(e)}")
+    else:
+        print("Email credentials not found in environment variables. Skipping email sending.")
+        print("Set SENDER_EMAIL, SENDER_PASSWORD, and RECIPIENT_EMAIL to enable email functionality.")
 
 
 if __name__ == "__main__":
