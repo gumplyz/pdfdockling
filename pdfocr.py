@@ -1,6 +1,11 @@
 
 from pathlib import Path
 from datetime import datetime
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import (
@@ -21,6 +26,56 @@ def create_output_folder():
     return output_folder
 
 
+def rename_to_txt(md_file_path):
+    """Rename markdown file to txt file."""
+    txt_file_path = md_file_path.with_suffix('.txt')
+    md_file_path.rename(txt_file_path)
+    return txt_file_path
+
+
+def send_email_with_attachment(file_path, recipient_email, smtp_server="smtp.163.com", smtp_port=465,
+                                sender_email=None, sender_password=None):
+    """
+    Send an email with the file as an attachment.
+
+    Args:
+        file_path: Path to the file to attach
+        recipient_email: Email address of the recipient
+        smtp_server: SMTP server address (default: smtp.163.com)
+        smtp_port: SMTP port (default: 465 for SSL)
+        sender_email: Sender's email address
+        sender_password: Sender's email password or app-specific password
+    """
+    if not sender_email or not sender_password:
+        raise ValueError("sender_email and sender_password must be provided")
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+    msg['Subject'] = f"PDF OCR Output - {file_path.stem}"
+
+    body = f"Please find attached the OCR output file: {file_path.name}"
+    msg.attach(MIMEText(body, 'plain'))
+
+    with open(file_path, 'rb') as attachment:
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(attachment.read())
+
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', f'attachment; filename= {file_path.name}')
+    msg.attach(part)
+
+    try:
+        server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+        print(f"Email sent successfully to {recipient_email}")
+    except Exception as e:
+        print(f"Failed to send email: {str(e)}")
+        raise
+
+
 def main():
     import os
 
@@ -28,7 +83,7 @@ def main():
     os.environ['HTTPS_PROXY'] = 'http://proxy.net.sap.corp:8080'
 
     data_folder = Path(__file__).parent / "../../tests/data"
-    input_doc_path = Path("./data/在李克农身边的日子.pdf")
+    input_doc_path = Path("./data/吕思勉全集 7 隋唐五代史 上 (吕思勉著).pdf")
 
     pipeline_options = PdfPipelineOptions()
     pipeline_options.do_ocr = True
@@ -65,6 +120,27 @@ def main():
 
     print(f"Markdown output saved to: {output_file}")
     print(f"\nPreview:\n{md[:500]}...")  # Print first 500 characters as preview
+
+    # Rename to .txt file
+    txt_file = rename_to_txt(output_file)
+    print(f"File renamed to: {txt_file}")
+
+    # Send email with attachment
+    # NOTE: You need to set your email credentials here
+    # For Gmail, use an app-specific password: https://support.google.com/accounts/answer/185833
+    sender_email = "gumplyz22@163.com"  # Replace with your email
+    sender_password = "ADaMqASzVgAJeYcg"  # Replace with your app password
+    recipient_email = "gumplyz_FIBnP0@kindle.com"
+
+    try:
+        send_email_with_attachment(
+            file_path=txt_file,
+            recipient_email=recipient_email,
+            sender_email=sender_email,
+            sender_password=sender_password
+        )
+    except Exception as e:
+        print(f"Email sending failed: {str(e)}")
 
 
 if __name__ == "__main__":
